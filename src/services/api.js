@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || '',
+    baseURL: process.env.REACT_APP_API_URL || 'https://the-rush-backend.onrender.com',
     headers: { 'Content-Type': 'application/json' }
 });
 
@@ -42,6 +42,7 @@ const api = {
 
     adminOverview: () => data(client.get('/api/admin/overview')),
     adminReviews: sort => data(client.get('/api/admin/reviews', { params: { sort } })),
+    createUser: body => data(client.post('/api/admin/users', body)),
     addMovie: body => data(client.post('/api/admin/movies', body)),
     deleteMovie: id => data(client.delete(`/api/admin/movies/${encodeURIComponent(id)}`)),
     deleteReview: id => data(client.delete(`/api/admin/reviews/${encodeURIComponent(id)}`))

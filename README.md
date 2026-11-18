@@ -6,7 +6,7 @@ A React and Bootstrap site for the student short film **The Rush**. The app incl
 
 1. Start the API by following [`../backend/README.md`](../backend/README.md).
 2. From this directory, run `npm install` and then `npm start`.
-3. Configure `REACT_APP_API_URL` if the API is not at the development proxy's `http://localhost:5000`.
+3. Configure `REACT_APP_API_URL` if the API is not at the default hosted backend `https://the-rush-backend.onrender.com`.
 
 The film player and trailer use the YouTube video ID configured in `src/data/film.js`. The hero and poster are locally stored copies of that video's public thumbnails. The About page's campus/team photographs are illustrative Unsplash images; replace them with your production's own behind-the-scenes photos and cast portraits when available.
 

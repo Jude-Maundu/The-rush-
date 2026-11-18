@@ -1,9 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
+import Admin from './Components/Admin/Admin';
+import api from './services/api';
 
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
   localStorage.clear();
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 test('renders the homepage', async () => {
@@ -32,4 +38,64 @@ test('opens a dedicated profile page for a cast or crew member', async () => {
   expect(await screen.findByRole('heading', { name: 'Teddy Ngare' })).toBeInTheDocument();
   expect(screen.getByText('Director')).toBeInTheDocument();
   expect(screen.getByRole('img', { name: 'Teddy Ngare' })).toHaveAttribute('src', '/cast/Teddy.jpeg');
+});
+
+test('shows the provided cast and crew names', async () => {
+  render(<App />);
+  fireEvent.click(await screen.findByRole('link', { name: 'Cast & crew' }));
+
+  for (const name of [
+    'Teddy Ngare',
+    'Felister Mwende',
+    'Rita Njeri',
+    'Gift Kioko',
+    'Felix Ochari',
+    'Daniel Gori',
+    'Dimitry Bifwoli',
+    'Evelyn Mwikali',
+    'Serena Spechiozers'
+  ]) {
+    expect(await screen.findByRole('heading', { name })).toBeInTheDocument();
+  }
+  expect(screen.getByRole('img', { name: 'Dimitry Bifwoli' })).toHaveAttribute('src', '/cast/Dimitry.jpeg');
+  expect(screen.queryByText('Lighting technician')).not.toBeInTheDocument();
+});
+
+test('explains Supabase signup rate limits and offers sign in', async () => {
+  window.history.replaceState({}, '', '/signup');
+  jest.spyOn(api, 'signup').mockRejectedValue(
+    Object.assign(new Error('Rate limit exceeded'), { status: 429 })
+  );
+  render(<App />);
+
+  fireEvent.change(await screen.findByLabelText('Your name'), { target: { value: 'Jude' } });
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jude@example.com' } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secure-password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'CREATE ACCOUNT' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/temporarily rate-limited signup/i);
+  expect(screen.getByRole('link', { name: 'sign in instead' })).toHaveAttribute('href', '/signin');
+});
+
+test('allows an admin to create a member account', async () => {
+  jest.spyOn(api, 'adminOverview').mockResolvedValue({ overview: { userCount: 1 } });
+  jest.spyOn(api, 'adminReviews').mockResolvedValue({ reviews: [] });
+  jest.spyOn(api, 'movies').mockResolvedValue({ movies: [] });
+  const createUser = jest.spyOn(api, 'createUser').mockResolvedValue({
+    user: { email: 'member@example.com', role: 'member' }
+  });
+  render(<Admin />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'users' }));
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Member' } });
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'member@example.com' } });
+  fireEvent.change(screen.getByLabelText('Initial password'), { target: { value: 'secure-password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'CREATE MEMBER' }));
+
+  await waitFor(() => expect(createUser).toHaveBeenCalledWith({
+    name: 'New Member',
+    email: 'member@example.com',
+    password: 'secure-password'
+  }));
+  expect(await screen.findByText(/Member account created for member@example\.com/)).toBeInTheDocument();
 });

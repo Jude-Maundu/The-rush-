@@ -23,12 +23,14 @@ function Auth({ mode }) {
     const [newPassword, setNewPassword] = useState('');
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [signupRateLimited, setSignupRateLimited] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     async function submit(event) {
         event.preventDefault();
         setError('');
         setMessage('');
+        setSignupRateLimited(false);
         setSubmitting(true);
 
         try {
@@ -54,7 +56,11 @@ function Auth({ mode }) {
             window.dispatchEvent(new Event('rush-auth-change'));
             navigate(result.user.role === 'admin' ? '/admin' : '/watch');
         } catch (requestError) {
-            setError(requestError.message);
+            if (isSignup && requestError.status === 429) {
+                setSignupRateLimited(true);
+            } else {
+                setError(requestError.message);
+            }
         } finally {
             setSubmitting(false);
         }
@@ -88,6 +94,11 @@ function Auth({ mode }) {
                 </p>
 
                 {error && <div className="alert alert-danger" role="alert">{error}</div>}
+                {signupRateLimited && (
+                    <div className="alert alert-warning" role="alert">
+                        Supabase has temporarily rate-limited signup or confirmation emails. Repeated retries will not clear the limit; wait before trying again. If you already created an account, <Link to="/signin">sign in instead</Link>. If this keeps happening for new users, configure a custom SMTP provider in Supabase under Authentication → SMTP.
+                    </div>
+                )}
                 {message && <div className="alert alert-success" role="status">{message}</div>}
 
                 <form onSubmit={submit}>

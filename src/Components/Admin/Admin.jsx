@@ -12,6 +12,8 @@ function Admin() {
 
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
+    const [creatingUser, setCreatingUser] = useState(false);
 
     const [movieForm, setMovieForm] = useState({
         title: '',
@@ -108,6 +110,28 @@ function Admin() {
             setMessage('Review deleted successfully.');
         } catch (err) {
             setError(err.message);
+        }
+    }
+
+    async function createUser(event) {
+        event.preventDefault();
+        setMessage('');
+        setError('');
+        setCreatingUser(true);
+
+        try {
+            const result = await api.createUser({
+                ...userForm,
+                name: userForm.name.trim(),
+                email: userForm.email.trim()
+            });
+            setUserForm({ name: '', email: '', password: '' });
+            setMessage(`Member account created for ${result.user.email}. Share the initial password with them securely.`);
+            await loadDashboard();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setCreatingUser(false);
         }
     }
 
@@ -364,14 +388,37 @@ function Admin() {
 
                 <div className="bg-dark rounded p-4">
 
-                    <h5 className="text-white">
-                        User Management
-                    </h5>
-
+                    <h5 className="text-white mb-3">Create Member Account</h5>
                     <p className="text-secondary">
-                        User management API will be connected when the
-                        backend user-list endpoint is implemented.
+                        Creates a confirmed member account without sending a confirmation email. Share the initial password securely.
                     </p>
+                    <form onSubmit={createUser} className="row g-3">
+                        <div className="col-md-4">
+                            <label className="form-label text-white" htmlFor="admin-user-name">Name</label>
+                            <input id="admin-user-name" className="form-control bg-black text-white border-secondary"
+                                autoComplete="name" value={userForm.name} required
+                                onChange={event => setUserForm({ ...userForm, name: event.target.value })} />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label text-white" htmlFor="admin-user-email">Email</label>
+                            <input id="admin-user-email" type="email"
+                                className="form-control bg-black text-white border-secondary"
+                                autoComplete="email" value={userForm.email} required
+                                onChange={event => setUserForm({ ...userForm, email: event.target.value })} />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label text-white" htmlFor="admin-user-password">Initial password</label>
+                            <input id="admin-user-password" type="password" minLength="8"
+                                className="form-control bg-black text-white border-secondary"
+                                autoComplete="new-password" value={userForm.password} required
+                                onChange={event => setUserForm({ ...userForm, password: event.target.value })} />
+                        </div>
+                        <div className="col-12">
+                            <button className="btn fw-bold" style={{ background: '#D6FF00' }} disabled={creatingUser}>
+                                {creatingUser ? 'CREATING…' : 'CREATE MEMBER'}
+                            </button>
+                        </div>
+                    </form>
 
                 </div>
 
