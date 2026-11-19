@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { crew, film } from '../data/film';
+import api from '../services/api';
+import { film } from '../data/film';
 
-function downloadEpk() {
-    const credits = crew.map(member => `${member.name} — ${member.role}`).join('\n');
+function downloadEpk(members) {
+    const credits = members.length
+        ? members.map(member => `${member.name} — ${member.role}`).join('\n')
+        : 'No cast or crew profiles have been added yet.';
     const content = [
         film.title.toUpperCase(),
         'A student short film',
@@ -30,6 +33,24 @@ function downloadEpk() {
 
 function ProjectInfo() {
     const { section } = useParams();
+    const [members, setMembers] = useState([]);
+    const [membersLoading, setMembersLoading] = useState(false);
+    const [membersError, setMembersError] = useState('');
+
+    useEffect(() => {
+        if (!['epk', 'director-statement'].includes(section)) return undefined;
+        let active = true;
+        setMembersLoading(true);
+        setMembersError('');
+        api.members().then(result => {
+            if (active) setMembers(result.members || []);
+        }).catch(error => {
+            if (active) setMembersError(error.message);
+        }).finally(() => {
+            if (active) setMembersLoading(false);
+        });
+        return () => { active = false; };
+    }, [section]);
 
     if (!['synopsis', 'director-statement', 'epk'].includes(section)) {
         return <Navigate to="/about" replace />;
@@ -45,9 +66,12 @@ function ProjectInfo() {
                     <p className="text-secondary">
                         Download a text press kit with the film’s synopsis, details, and current cast and crew credits.
                     </p>
-                    <button className="btn btn-lime" onClick={downloadEpk}>
+                    <button className="btn btn-lime" onClick={() => downloadEpk(members)}
+                        disabled={membersLoading || Boolean(membersError)}>
                         <i className="bi bi-download me-2" />Download EPK
                     </button>
+                    {membersLoading && <p className="small text-secondary mt-3 mb-0" role="status">Loading current credits…</p>}
+                    {membersError && <p className="small text-danger mt-3 mb-0" role="alert">Could not load cast and crew: {membersError}</p>}
                     <p className="small text-secondary mt-3 mb-0">
                         A designed press kit with approved production photos can be added when those materials are provided.
                     </p>
@@ -57,6 +81,7 @@ function ProjectInfo() {
     }
 
     const isSynopsis = section === 'synopsis';
+    const director = members.find(member => member.role.toLowerCase().includes('director'));
 
     return (
         <main className="container py-5 min-vh-100">
@@ -70,10 +95,11 @@ function ProjectInfo() {
                     <p className="page-lede mb-0">{film.synopsis}</p>
                 ) : (
                     <>
-                        <h2 className="h4 text-white">Teddy Ngare · Director</h2>
+                        {director && <h2 className="h4 text-white">{director.name} · {director.role}</h2>}
                         <p className="text-secondary mb-0">
-                            The director’s approved statement has not been provided yet. Add Teddy’s own words here when available.
+                            The director’s approved statement has not been provided yet.
                         </p>
+                        {membersError && <p className="small text-danger mt-3 mb-0" role="alert">Could not load cast and crew: {membersError}</p>}
                     </>
                 )}
             </section>

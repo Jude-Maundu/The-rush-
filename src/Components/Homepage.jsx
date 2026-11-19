@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { film, members as fallbackMembers } from '../data/film';
+import { film } from '../data/film';
 
 function getWatchData() {
     try {
@@ -18,7 +18,9 @@ function Homepage() {
     const [saved, setSaved] = useState(false);
     const [watchData, setWatchData] = useState(getWatchData);
     const [trailerOpen, setTrailerOpen] = useState(false);
-    const [members, setMembers] = useState(fallbackMembers);
+    const [members, setMembers] = useState([]);
+    const [membersLoading, setMembersLoading] = useState(true);
+    const [membersError, setMembersError] = useState('');
 
     useEffect(() => {
         try {
@@ -29,8 +31,10 @@ function Homepage() {
         }
         setWatchData(getWatchData());
         api.members().then(result => {
-            if (result.members?.length) setMembers(result.members);
-        }).catch(() => {});
+            setMembers(result.members || []);
+        }).catch(err => {
+            setMembersError(err.message);
+        }).finally(() => setMembersLoading(false));
     }, []);
 
     function toggleWatchLater() {
@@ -62,7 +66,7 @@ function Homepage() {
     const progress = hasProgress
         ? Math.round(watchData.position / watchData.duration * 100)
         : 0;
-    const featuredMembers = members.filter(member => member.image).slice(0, 4);
+    const featuredMembers = members.slice(0, 4);
 
     return (
         <main className="home-page">
@@ -159,12 +163,21 @@ function Homepage() {
                     </div>
                     <Link to="/cast" className="text-lime">View everyone <i className="bi bi-arrow-right" /></Link>
                 </div>
+                {membersLoading && <p className="text-secondary" role="status">Loading cast and crew…</p>}
+                {membersError && <p className="text-danger" role="alert">Could not load cast and crew: {membersError}</p>}
+                {!membersLoading && !membersError && members.length === 0 && (
+                    <p className="text-secondary">Cast and crew profiles will appear here when the production team adds them.</p>
+                )}
                 <div className="row g-3">
                     {featuredMembers.map(member => (
                         <div className="col-6 col-md-3" key={member.slug}>
                             <Link className="crew-card h-100 text-decoration-none" to={`/cast/${member.slug}`}>
                                 <div className="crew-card__image crew-card__image--portrait">
-                                    <img src={member.image} alt={member.name} loading="lazy" />
+                                    {member.image ? (
+                                        <img src={member.image} alt={member.name} loading="lazy" />
+                                    ) : (
+                                        <span aria-hidden="true">{member.name.split(' ').map(part => part[0]).slice(0, 2).join('')}</span>
+                                    )}
                                 </div>
                                 <div className="p-3">
                                     <h3 className="h5 text-white mb-1">{member.name}</h3>

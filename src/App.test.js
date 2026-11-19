@@ -3,9 +3,22 @@ import App from './App';
 import Admin from './Components/Admin/Admin';
 import api from './services/api';
 
+const testMembers = [
+  { id: '1', name: 'Teddy Ngare', role: 'Director', group: 'crew', image: '/cast/Teddy.jpeg', slug: 'teddy-ngare' },
+  { id: '2', name: 'Felister Mwende', role: 'Producer', group: 'crew', image: '/cast/Felister.jpeg', slug: 'felister-mwende' },
+  { id: '3', name: 'Rita Njeri', role: 'Script writer', group: 'crew', image: '/cast/Ritah.jpeg', slug: 'rita-njeri' },
+  { id: '4', name: 'Serena Spechiozers', role: 'Director of photography', group: 'crew', image: '/cast/Serena.jpeg', slug: 'serena-spechiozers' },
+  { id: '5', name: 'Gift Kioko', role: 'Videographer', group: 'crew', image: '/cast/Gift.jpeg', slug: 'gift-kioko' },
+  { id: '6', name: 'Felix Ochari', role: 'Editor', group: 'crew', image: '/cast/Felix.jpeg', slug: 'felix-ochari' },
+  { id: '7', name: 'Daniel Gori', role: 'Sound', group: 'crew', image: '/cast/Daniel.jpeg', slug: 'daniel-gori' },
+  { id: '8', name: 'Dimitry Bifwoli', role: 'Main actor', group: 'cast', image: '/cast/Dimitry.jpeg', slug: 'dimitry-bifwoli' },
+  { id: '9', name: 'Evelyn Mwikali', role: 'Supporting actor', group: 'cast', image: '/cast/Evelyne.jpeg', slug: 'evelyn-mwikali' }
+];
+
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
   localStorage.clear();
+  jest.spyOn(api, 'members').mockResolvedValue({ members: [] });
 });
 
 afterEach(() => {
@@ -15,8 +28,14 @@ afterEach(() => {
 test('renders the homepage', async () => {
   render(<App />);
   expect(await screen.findByRole('heading', { name: 'THE RUSH' })).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Teddy Ngare' })).toHaveAttribute('src', '/cast/Teddy.jpeg');
-  expect(screen.getByRole('link', { name: /Teddy Ngare/ })).toHaveAttribute('href', '/cast/teddy-ngare');
+  expect(await screen.findByText(/profiles will appear here when the production team adds them/i)).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Teddy Ngare/ })).not.toBeInTheDocument();
+});
+
+test('renders cast and crew entered in the admin database', async () => {
+  api.members.mockResolvedValue({ members: [testMembers[0]] });
+  render(<App />);
+  expect(await screen.findByRole('link', { name: /Teddy Ngare/ })).toHaveAttribute('href', '/cast/teddy-ngare');
 });
 
 test('navigates to the film information page', async () => {
@@ -32,6 +51,7 @@ test('requires a sign in before showing the full film', async () => {
 });
 
 test('opens a dedicated profile page for a cast or crew member', async () => {
+  api.members.mockResolvedValue({ members: testMembers });
   render(<App />);
   fireEvent.click(await screen.findByRole('link', { name: 'Cast & crew' }));
   fireEvent.click(await screen.findByRole('link', { name: /Teddy Ngare/ }));
@@ -41,6 +61,7 @@ test('opens a dedicated profile page for a cast or crew member', async () => {
 });
 
 test('shows the provided cast and crew names', async () => {
+  api.members.mockResolvedValue({ members: testMembers });
   render(<App />);
   fireEvent.click(await screen.findByRole('link', { name: 'Cast & crew' }));
 
@@ -112,7 +133,7 @@ test('lets an admin add a cast profile with the Cloudinary portrait uploader', a
   render(<Admin />);
 
   fireEvent.click(screen.getByRole('button', { name: 'members' }));
-  expect(screen.getByText(/uploaded securely to Cloudinary when you save/i)).toBeInTheDocument();
+  expect(screen.getByText(/try Cloudinary first and use temporary backend storage/i)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Actor' } });
   fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Lead actor' } });
   fireEvent.click(screen.getByRole('button', { name: 'ADD MEMBER' }));

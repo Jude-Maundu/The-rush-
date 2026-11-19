@@ -481,7 +481,7 @@ function Admin() {
                                         {portraitFile?.name || (removePortrait ? 'Portrait will be removed' : 'Add a portrait')}
                                     </div>
                                     <p className="small text-secondary mb-3">
-                                        Choose a JPG, PNG, or WebP image up to 5 MB. It will be uploaded securely to Cloudinary when you save.
+                                        Choose a JPG, PNG, or WebP image up to 5 MB. We’ll try Cloudinary first and use temporary backend storage if it’s unavailable.
                                     </p>
                                     <div className="d-flex flex-wrap gap-2">
                                         <label htmlFor="member-image" className="btn btn-outline-light btn-sm mb-0">

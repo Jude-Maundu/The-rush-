@@ -8,9 +8,9 @@ A React and Bootstrap site for the student short film **The Rush**. The app incl
 2. From this directory, run `npm install` and then `npm start`.
 3. Configure `REACT_APP_API_URL` if the API is not at the default hosted backend `https://the-rush-backend.onrender.com`.
 
-The film player and trailer use the YouTube video ID configured in `src/data/film.js`. The hero and poster are locally stored copies of that video's public thumbnails. The About page's campus/team photographs are illustrative Unsplash images; replace them with your production's own behind-the-scenes photos and cast portraits when available.
+Cast and crew names, roles, biographies, and portraits come from the backend and are managed in the admin dashboard; there are no frontend cast/crew defaults. Run the latest `../backend/supabase/schema.sql` to remove untouched legacy sample records and use the database table for admin-managed profiles. The film player and trailer use details in `src/data/film.js`. The About page's campus/team photographs are illustrative; replace them with your production's own behind-the-scenes photos when available.
 
-Each named cast or crew member has a page at `/cast/<slug>`. Portrait paths are set on the matching entries in `src/data/film.js`; add remaining portraits and approved biographies there. Set `REACT_APP_CONTACT_EMAIL` to enable the Contact form; official social handles and screening dates should be added when confirmed.
+Each cast or crew member added in the dashboard has a page at `/cast/<slug>`. Set `REACT_APP_CONTACT_EMAIL` to enable the Contact form; official social handles and screening dates should be added when confirmed.
 
 ## Checks
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { members as fallbackMembers } from '../data/film';
 
 function MemberCard({ member }) {
     return (
@@ -27,11 +26,15 @@ function MemberCard({ member }) {
 }
 
 function Cast() {
-    const [members, setMembers] = useState(fallbackMembers);
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     useEffect(() => {
         api.members().then(result => {
-            if (result.members?.length) setMembers(result.members);
-        }).catch(() => {});
+            setMembers(result.members || []);
+        }).catch(err => {
+            setError(err.message);
+        }).finally(() => setLoading(false));
     }, []);
     const castMembers = members.filter(member => member.group === 'cast');
     const crewMembers = members.filter(member => member.group === 'crew');
@@ -44,10 +47,21 @@ function Cast() {
                 Select a cast or crew member to visit their profile.
             </p>
 
+            {loading && <p className="text-secondary mt-4" role="status">Loading cast and crew…</p>}
+            {error && <div className="alert alert-danger mt-4" role="alert">
+                Could not load cast and crew: {error}
+            </div>}
+            {!loading && !error && members.length === 0 && (
+                <div className="content-panel mt-4">
+                    <h2 className="h5 text-white">Cast and crew profiles are coming soon</h2>
+                    <p className="text-secondary mb-0">Profiles added by the production team will appear here.</p>
+                </div>
+            )}
+
             <section className="mt-5">
                 <h2 className="h3 text-white mb-3">Cast</h2>
                 <div className="row g-4">
-                    {castMembers.map(member => (
+                    {!loading && !error && castMembers.map(member => (
                         <div className="col-6 col-md-4 col-lg-3" key={member.slug}>
                             <MemberCard member={member} />
                         </div>
@@ -58,7 +72,7 @@ function Cast() {
             <section className="mt-5">
                 <h2 className="h3 text-white mb-3">Crew</h2>
                 <div className="row g-4">
-                    {crewMembers.map(member => (
+                    {!loading && !error && crewMembers.map(member => (
                         <div className="col-6 col-md-4 col-lg-3" key={member.slug}>
                             <MemberCard member={member} />
                         </div>

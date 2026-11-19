@@ -1,17 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import api from '../services/api';
-import { members as fallbackMembers } from '../data/film';
 
 function MemberProfile() {
     const { slug } = useParams();
-    const [members, setMembers] = useState(fallbackMembers);
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     useEffect(() => {
         api.members().then(result => {
-            if (result.members?.length) setMembers(result.members);
-        }).catch(() => {});
+            setMembers(result.members || []);
+        }).catch(err => {
+            setError(err.message);
+        }).finally(() => setLoading(false));
     }, []);
     const member = members.find(person => person.slug === slug);
+
+    if (loading) {
+        return <main className="container py-5 min-vh-100"><p className="text-secondary" role="status">Loading profile…</p></main>;
+    }
+
+    if (error) {
+        return (
+            <main className="container py-5 min-vh-100">
+                <div className="alert alert-danger" role="alert">Could not load this profile: {error}</div>
+                <Link to="/cast" className="text-lime">Back to cast &amp; crew</Link>
+            </main>
+        );
+    }
 
     if (!member) return <Navigate to="/cast" replace />;
 

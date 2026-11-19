@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { film, members } from '../data/film';
+import api from '../services/api';
+import { film } from '../data/film';
 
 const behindTheScenes = [
     { image: '/images/campus.jpg', alt: 'Students gathered on a campus', caption: 'A campus full of stories.' },
@@ -9,6 +10,14 @@ const behindTheScenes = [
 ];
 
 function About() {
+    const [members, setMembers] = useState([]);
+    const [membersError, setMembersError] = useState('');
+    useEffect(() => {
+        api.members().then(result => setMembers(result.members || []))
+            .catch(error => setMembersError(error.message));
+    }, []);
+    const director = members.find(member => member.role.toLowerCase().includes('director'));
+
     return (
         <main className="container py-5 min-vh-100">
             <p className="section-eyebrow">A SHORT FILM ABOUT CAMPUS LIFE</p>
@@ -40,10 +49,11 @@ function About() {
                 <h3 className="h5 text-white mt-4">Director’s statement</h3>
                 <p className="text-secondary">
                     The director’s approved statement will be added here.
-                    {members.find(member => member.role === 'Director') && (
-                        <> — <Link to={`/cast/${members.find(member => member.role === 'Director').slug}`} className="text-lime">Teddy Ngare, Director</Link></>
+                    {director && (
+                        <> — <Link to={`/cast/${director.slug}`} className="text-lime">{director.name}, {director.role}</Link></>
                     )}
                 </p>
+                {membersError && <p className="small text-danger" role="alert">Could not load cast and crew: {membersError}</p>}
                 <Link className="text-lime" to="/about/director-statement">Read the director’s statement</Link>
             </section>
 
