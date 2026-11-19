@@ -35,12 +35,7 @@ function Gallery() {
             {showTrailer && <section className="mt-5">
                 <h2 className="h3 text-white mb-3">Trailers &amp; clips</h2>
                 <div className="gallery-video">
-                    <iframe
-                        src={`https://www.youtube-nocookie.com/embed/${film.videoId}`}
-                        title="The Rush trailer"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                    />
+                    <video src={film.trailerSrc} title="The Rush trailer" controls />
                 </div>
                 <p className="small text-secondary mt-2">
                     Watch the full film on the <Link className="text-lime" to="/watch">film page</Link>.

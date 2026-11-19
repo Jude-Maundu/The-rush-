@@ -81,6 +81,7 @@ test('allows an admin to create a member account', async () => {
   jest.spyOn(api, 'adminOverview').mockResolvedValue({ overview: { userCount: 1 } });
   jest.spyOn(api, 'adminReviews').mockResolvedValue({ reviews: [] });
   jest.spyOn(api, 'movies').mockResolvedValue({ movies: [] });
+  jest.spyOn(api, 'adminMembers').mockResolvedValue({ members: [] });
   const createUser = jest.spyOn(api, 'createUser').mockResolvedValue({
     user: { email: 'member@example.com', role: 'member' }
   });
@@ -98,4 +99,29 @@ test('allows an admin to create a member account', async () => {
     password: 'secure-password'
   }));
   expect(await screen.findByText(/Member account created for member@example\.com/)).toBeInTheDocument();
+});
+
+test('lets an admin add a cast profile with the Cloudinary portrait uploader', async () => {
+  jest.spyOn(api, 'adminOverview').mockResolvedValue({ overview: {} });
+  jest.spyOn(api, 'adminReviews').mockResolvedValue({ reviews: [] });
+  jest.spyOn(api, 'movies').mockResolvedValue({ movies: [] });
+  jest.spyOn(api, 'adminMembers').mockResolvedValue({ members: [] });
+  const addMember = jest.spyOn(api, 'addMember').mockResolvedValue({
+    member: { id: 'member-id', name: 'New Actor', role: 'Lead actor', group: 'cast' }
+  });
+  render(<Admin />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'members' }));
+  expect(screen.getByText(/uploaded securely to Cloudinary when you save/i)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Actor' } });
+  fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Lead actor' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ADD MEMBER' }));
+
+  await waitFor(() => expect(addMember).toHaveBeenCalledTimes(1));
+  const payload = addMember.mock.calls[0][0];
+  expect(payload).toBeInstanceOf(FormData);
+  expect(payload.get('name')).toBe('New Actor');
+  expect(payload.get('role')).toBe('Lead actor');
+  expect(payload.get('group')).toBe('cast');
+  expect(await screen.findByText('Cast or crew member added successfully.')).toBeInTheDocument();
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { film, members } from '../data/film';
+import api from '../services/api';
+import { film, members as fallbackMembers } from '../data/film';
 
 function getWatchData() {
     try {
@@ -17,6 +18,7 @@ function Homepage() {
     const [saved, setSaved] = useState(false);
     const [watchData, setWatchData] = useState(getWatchData);
     const [trailerOpen, setTrailerOpen] = useState(false);
+    const [members, setMembers] = useState(fallbackMembers);
 
     useEffect(() => {
         try {
@@ -26,6 +28,9 @@ function Homepage() {
             localStorage.removeItem('watchLater');
         }
         setWatchData(getWatchData());
+        api.members().then(result => {
+            if (result.members?.length) setMembers(result.members);
+        }).catch(() => {});
     }, []);
 
     function toggleWatchLater() {
@@ -101,12 +106,7 @@ function Homepage() {
                                 onClick={() => setTrailerOpen(false)} />
                         </div>
                         <div className="ratio ratio-16x9">
-                            <iframe
-                                src={`https://www.youtube-nocookie.com/embed/${film.videoId}?autoplay=1&start=0&end=${film.trailerSeconds}&rel=0`}
-                                title="The Rush trailer"
-                                allow="autoplay; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                            />
+                            <video src={film.trailerSrc} title="The Rush trailer" controls autoPlay />
                         </div>
                     </section>
                 </div>

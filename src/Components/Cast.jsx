@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { members } from '../data/film';
+import api from '../services/api';
+import { members as fallbackMembers } from '../data/film';
 
 function MemberCard({ member }) {
     return (
@@ -26,6 +27,12 @@ function MemberCard({ member }) {
 }
 
 function Cast() {
+    const [members, setMembers] = useState(fallbackMembers);
+    useEffect(() => {
+        api.members().then(result => {
+            if (result.members?.length) setMembers(result.members);
+        }).catch(() => {});
+    }, []);
     const castMembers = members.filter(member => member.group === 'cast');
     const crewMembers = members.filter(member => member.group === 'crew');
 

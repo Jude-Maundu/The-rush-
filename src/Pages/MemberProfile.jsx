@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { members } from '../data/film';
+import api from '../services/api';
+import { members as fallbackMembers } from '../data/film';
 
 function MemberProfile() {
     const { slug } = useParams();
+    const [members, setMembers] = useState(fallbackMembers);
+    useEffect(() => {
+        api.members().then(result => {
+            if (result.members?.length) setMembers(result.members);
+        }).catch(() => {});
+    }, []);
     const member = members.find(person => person.slug === slug);
 
     if (!member) return <Navigate to="/cast" replace />;
@@ -33,8 +40,7 @@ function MemberProfile() {
                     <div className="member-profile__bio">
                         <h2 className="h5 text-white">About {member.name.split(' ')[0]}</h2>
                         <p className="text-secondary mb-0">
-                            Their {member.role.toLowerCase()} contribution helped bring The Rush to the screen.
-                            An approved biography will be added here.
+                            {member.bio || `Their ${member.role.toLowerCase()} contribution helped bring The Rush to the screen.`}
                         </p>
                     </div>
                     <Link to="/watch" className="btn btn-lime mt-4">

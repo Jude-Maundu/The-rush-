@@ -6,6 +6,7 @@ function Admin() {
     const [overview, setOverview] = useState({});
     const [reviews, setReviews] = useState([]);
     const [movies, setMovies] = useState([]);
+    const [members, setMembers] = useState([]);
 
     const [sort, setSort] = useState('newest');
     const [activeTab, setActiveTab] = useState('overview');
@@ -25,6 +26,24 @@ function Admin() {
         trailer: '',
         director: ''
     });
+    const [memberForm, setMemberForm] = useState({
+        name: '', role: '', group: 'cast', image: '', bio: ''
+    });
+    const [editingMemberId, setEditingMemberId] = useState(null);
+    const [portraitFile, setPortraitFile] = useState(null);
+    const [portraitPreview, setPortraitPreview] = useState('');
+    const [removePortrait, setRemovePortrait] = useState(false);
+    const [savingMember, setSavingMember] = useState(false);
+
+    useEffect(() => {
+        if (!portraitFile) {
+            setPortraitPreview('');
+            return undefined;
+        }
+        const preview = URL.createObjectURL(portraitFile);
+        setPortraitPreview(preview);
+        return () => URL.revokeObjectURL(preview);
+    }, [portraitFile]);
 
     const loadDashboard = useCallback(async () => {
         try {
@@ -47,10 +66,20 @@ function Admin() {
         }
     }, []);
 
+    const loadMembers = useCallback(async () => {
+        try {
+            const result = await api.adminMembers();
+            setMembers(result.members || []);
+        } catch (err) {
+            setError(err.message);
+        }
+    }, []);
+
     useEffect(() => {
         loadDashboard();
         loadMovies();
-    }, [loadDashboard, loadMovies]);
+        loadMembers();
+    }, [loadDashboard, loadMovies, loadMembers]);
 
     async function addMovie(e) {
 
@@ -135,6 +164,88 @@ function Admin() {
         }
     }
 
+    function readPortrait(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+            setError('Choose a PNG, JPG, or WebP portrait.');
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Portrait images must be 5 MB or smaller.');
+            event.target.value = '';
+            return;
+        }
+        setError('');
+        setPortraitFile(file);
+        setRemovePortrait(false);
+    }
+
+    async function saveMember(event) {
+        event.preventDefault();
+        setMessage('');
+        setError('');
+        setSavingMember(true);
+        try {
+            const form = new FormData();
+            form.append('name', memberForm.name);
+            form.append('role', memberForm.role);
+            form.append('group', memberForm.group);
+            form.append('bio', memberForm.bio);
+            form.append('removeImage', String(removePortrait));
+            if (portraitFile) form.append('portrait', portraitFile);
+
+            const result = editingMemberId
+                ? await api.updateMember(editingMemberId, form)
+                : await api.addMember(form);
+            setMessage(result.warning || (editingMemberId
+                ? 'Cast or crew member updated successfully.'
+                : 'Cast or crew member added successfully.'));
+            setMemberForm({ name: '', role: '', group: 'cast', image: '', bio: '' });
+            setEditingMemberId(null);
+            setPortraitFile(null);
+            setRemovePortrait(false);
+            await loadMembers();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSavingMember(false);
+        }
+    }
+
+    function editMember(member) {
+        setEditingMemberId(member.id);
+        setMemberForm({
+            name: member.name || '',
+            role: member.role || '',
+            group: member.group || 'cast',
+            image: member.image || '',
+            bio: member.bio || ''
+        });
+        setPortraitFile(null);
+        setRemovePortrait(false);
+        setActiveTab('members');
+    }
+
+    function cancelMemberEdit() {
+        setEditingMemberId(null);
+        setMemberForm({ name: '', role: '', group: 'cast', image: '', bio: '' });
+        setPortraitFile(null);
+        setRemovePortrait(false);
+    }
+
+    async function deleteMember(id) {
+        if (!window.confirm('Delete this cast or crew member?')) return;
+        try {
+            const result = await api.deleteMember(id);
+            setMembers(previous => previous.filter(member => member.id !== id));
+            setMessage(result.warning || 'Cast or crew member deleted successfully.');
+        } catch (err) {
+            setError(err.message);
+        }
+    }
+
     return (
 
         <div
@@ -191,7 +302,7 @@ function Admin() {
 
             <div className="d-flex gap-2 flex-wrap mb-4">
 
-                {['overview', 'movies', 'reviews', 'users'].map(tab => (
+                {['overview', 'movies', 'members', 'reviews', 'users'].map(tab => (
 
                     <button
                         key={tab}
@@ -318,6 +429,148 @@ function Admin() {
 
                 </div>
 
+            )}
+
+            {activeTab === 'members' && (
+                <div className="bg-dark rounded p-4">
+                    <h5 className="text-white mb-4">
+                        {editingMemberId ? 'Edit Cast or Crew Member' : 'Add Cast or Crew Member'}
+                    </h5>
+                    <form onSubmit={saveMember} className="row g-3">
+                        <div className="col-md-4">
+                            <label className="form-label text-white" htmlFor="member-name">Name</label>
+                            <input id="member-name" className="form-control bg-black text-white border-secondary"
+                                value={memberForm.name} required
+                                onChange={event => setMemberForm({ ...memberForm, name: event.target.value })} />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label text-white" htmlFor="member-role">Role</label>
+                            <input id="member-role" className="form-control bg-black text-white border-secondary"
+                                value={memberForm.role} required
+                                onChange={event => setMemberForm({ ...memberForm, role: event.target.value })} />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label text-white" htmlFor="member-group">Group</label>
+                            <select id="member-group" className="form-select bg-black text-white border-secondary"
+                                value={memberForm.group}
+                                onChange={event => setMemberForm({ ...memberForm, group: event.target.value })}>
+                                <option value="cast">Cast</option>
+                                <option value="crew">Crew</option>
+                            </select>
+                        </div>
+                        <div className="col-12">
+                            <label className="form-label text-white" htmlFor="member-image">
+                                Portrait <span className="text-secondary fw-normal">(optional)</span>
+                            </label>
+                            <div className="d-flex flex-column flex-sm-row align-items-start gap-3 p-3 rounded border border-secondary bg-black">
+                                <div className="d-flex align-items-center justify-content-center rounded bg-dark overflow-hidden"
+                                    style={{ width: 104, height: 104, flex: '0 0 104px' }}>
+                                    {(portraitPreview || (!removePortrait && memberForm.image)) ? (
+                                        <img
+                                            src={portraitPreview || memberForm.image}
+                                            alt={`Portrait preview for ${memberForm.name || 'cast or crew member'}`}
+                                            className="w-100 h-100"
+                                            style={{ objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <i className="bi bi-person-bounding-box fs-1 text-secondary" aria-hidden="true" />
+                                    )}
+                                </div>
+                                <div className="flex-grow-1">
+                                    <div className="text-white fw-semibold mb-1">
+                                        {portraitFile?.name || (removePortrait ? 'Portrait will be removed' : 'Add a portrait')}
+                                    </div>
+                                    <p className="small text-secondary mb-3">
+                                        Choose a JPG, PNG, or WebP image up to 5 MB. It will be uploaded securely to Cloudinary when you save.
+                                    </p>
+                                    <div className="d-flex flex-wrap gap-2">
+                                        <label htmlFor="member-image" className="btn btn-outline-light btn-sm mb-0">
+                                            <i className="bi bi-upload me-1" />
+                                            {portraitFile || memberForm.image ? 'Choose another photo' : 'Choose photo'}
+                                        </label>
+                                        <input id="member-image" type="file" accept="image/png,image/jpeg,image/webp"
+                                            className="visually-hidden" onChange={readPortrait} />
+                                        {portraitFile && (
+                                            <button type="button" className="btn btn-outline-light btn-sm"
+                                                onClick={() => setPortraitFile(null)}>
+                                                Discard selection
+                                            </button>
+                                        )}
+                                        {!portraitFile && memberForm.image && (
+                                            <button type="button" className="btn btn-outline-danger btn-sm"
+                                                onClick={() => setRemovePortrait(!removePortrait)}>
+                                                {removePortrait ? 'Keep current photo' : 'Remove photo'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-12">
+                            <label className="form-label text-white" htmlFor="member-bio">Biography</label>
+                            <textarea id="member-bio" className="form-control bg-black text-white border-secondary"
+                                rows="3" value={memberForm.bio}
+                                onChange={event => setMemberForm({ ...memberForm, bio: event.target.value })} />
+                        </div>
+                        <div className="col-12 d-flex gap-2">
+                            <button className="btn fw-bold" style={{ background: '#D6FF00' }} disabled={savingMember}>
+                                {savingMember ? 'SAVING…' : editingMemberId ? 'SAVE CHANGES' : 'ADD MEMBER'}
+                            </button>
+                            {editingMemberId && (
+                                <button type="button" className="btn btn-outline-light"
+                                    onClick={cancelMemberEdit} disabled={savingMember}>
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
+                    </form>
+
+                    <hr className="border-secondary my-5" />
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h5 className="text-white mb-0">Cast &amp; Crew</h5>
+                        <span className="badge rounded-pill text-bg-secondary">{members.length} {members.length === 1 ? 'profile' : 'profiles'}</span>
+                    </div>
+                    {members.length === 0 ? (
+                        <div className="text-center rounded border border-secondary p-5">
+                            <i className="bi bi-people fs-2 text-secondary" aria-hidden="true" />
+                            <p className="text-white mt-2 mb-1">No profiles yet</p>
+                            <p className="text-secondary mb-0">Add a cast or crew member using the form above.</p>
+                        </div>
+                    ) : (
+                        <div className="row g-3">
+                            {members.map(member => (
+                                <div key={member.id} className="col-md-6 col-xl-4">
+                                    <article className="h-100 rounded border border-secondary bg-black p-3 d-flex gap-3">
+                                        {member.image ? (
+                                            <img src={member.image} alt="" loading="lazy"
+                                                style={{ width: 76, height: 92, objectFit: 'cover', borderRadius: 6, flex: '0 0 76px' }} />
+                                        ) : (
+                                            <div className="d-flex align-items-center justify-content-center rounded bg-dark text-secondary"
+                                                style={{ width: 76, height: 92, flex: '0 0 76px' }}>
+                                                <i className="bi bi-person fs-2" aria-hidden="true" />
+                                            </div>
+                                        )}
+                                        <div className="min-w-0 flex-grow-1">
+                                            <span className="badge rounded-pill text-bg-secondary text-capitalize mb-2">{member.group}</span>
+                                            <h6 className="text-white mb-1 text-break">{member.name}</h6>
+                                            <p className="small text-secondary mb-3">{member.role}</p>
+                                            <div className="d-flex flex-wrap gap-2">
+                                                <button className="btn btn-outline-light btn-sm"
+                                                    onClick={() => editMember(member)}>
+                                                    <i className="bi bi-pencil me-1" />Edit
+                                                </button>
+                                                <button className="btn btn-outline-danger btn-sm"
+                                                    onClick={() => deleteMember(member.id)}>
+                                                    <i className="bi bi-trash me-1" />Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </article>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             )}
 
             {activeTab === 'reviews' && (

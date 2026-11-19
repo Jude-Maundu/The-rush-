@@ -39,13 +39,22 @@ const api = {
     movie: id => data(client.get(`/api/movies/${encodeURIComponent(id)}`)),
     reviews: sort => data(client.get('/api/reviews', { params: { sort } })),
     addReview: body => data(client.post('/api/reviews', body)),
+    members: () => data(client.get('/api/members')),
 
     adminOverview: () => data(client.get('/api/admin/overview')),
     adminReviews: sort => data(client.get('/api/admin/reviews', { params: { sort } })),
     createUser: body => data(client.post('/api/admin/users', body)),
     addMovie: body => data(client.post('/api/admin/movies', body)),
     deleteMovie: id => data(client.delete(`/api/admin/movies/${encodeURIComponent(id)}`)),
-    deleteReview: id => data(client.delete(`/api/admin/reviews/${encodeURIComponent(id)}`))
+    deleteReview: id => data(client.delete(`/api/admin/reviews/${encodeURIComponent(id)}`)),
+    adminMembers: () => data(client.get('/api/admin/members')),
+    addMember: body => data(client.post('/api/admin/members', body, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })),
+    updateMember: (id, body) => data(client.put(`/api/admin/members/${encodeURIComponent(id)}`, body, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })),
+    deleteMember: id => data(client.delete(`/api/admin/members/${encodeURIComponent(id)}`))
 };
 
 export const authAPI = {
